@@ -1,0 +1,27 @@
+{
+  "version": "7",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1792351520870,
+      "tag": "0000_users_profiles",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1792351816875,
+      "tag": "0001_account_profile_names",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1792352417967,
+      "tag": "0002_profile_category_resume",
+      "breakpoints": true
+    }
+  ]
+}

@@ -8,7 +8,7 @@ integrations will be implemented in later phases.
 
 - Next.js App Router, TypeScript, and Tailwind CSS application scaffold.
 - Responsive dashboard preview with clearly labeled sample data.
-- Server-only Neon connection helper; no schema or migrations have been applied.
+- Server-only Neon connection helper and initial Users/Profiles migration.
 - Gmail mailbox OAuth is deferred until the candidate-consent flow is defined.
 - AI integrations and the browser extension are not connected yet.
 
@@ -46,9 +46,49 @@ server-side database helper in `src/lib/db.ts`. Keep real credentials in
 `OPENAI_API_KEY` and `GEMINI_API_KEY` are reserved for their respective
 server-side integrations and are not used by the current dashboard.
 
+## Users and candidate profiles
+
+The initial database schema contains:
+
+- `users`: staff and candidate Account identities, role, immediate parent,
+  staff display/login credentials, blocking metadata, and timestamps. Candidate
+  names live only in their `profiles` row.
+- `profiles`: one-to-one candidate details for Account users, with an optional
+  category assignment and optional resume PDF template reference. Candidate
+  fields are nullable so Managers can save drafts.
+- `categories`: category names selectable on candidate profiles.
+
+`resume_pdf_id` is nullable and intentionally has no foreign key yet. The
+resume-template table and its ownership/storage model are deferred, so no
+candidate can be assigned a nonexistent template until that model is decided.
+
+The database enforces the role hierarchy (Super Admin → Admin → Manager →
+Account), makes staff login names and normalized candidate email addresses
+unique, prevents changing a user's role, and only permits profiles for Account
+users. Candidate Accounts have no login credentials. User records are retained;
+blocking does not delete them.
+
+After adding `DATABASE_URL` to `.env.local`, apply the migration with
+`npm run db:migrate`. This modifies the selected Neon database.
+
+To create the one-time Super Admin, add these values to `.env.local` and run
+`npm run db:seed:super-admin`:
+
+```env
+SUPER_ADMIN_DISPLAY_NAME="Super Admin"
+SUPER_ADMIN_LOGIN_NAME="superadmin"
+SUPER_ADMIN_PASSWORD="choose-a-unique-password-at-least-14-characters-long"
+```
+
+The seed command hashes the password with scrypt, refuses to create a second
+Super Admin, and never prints the password or hash. Remove the seed password
+from `.env.local` after the command succeeds. Do not commit real environment
+values.
+
 ## Validation
 
 ```bash
+npm run db:generate
 npm run lint
 npm run build
 ```
