@@ -1,39 +1,10 @@
 import { loadEnvConfig } from "@next/env";
 import { neon } from "@neondatabase/serverless";
-import { randomBytes, scrypt as scryptCallback } from "node:crypto";
+import { hashPassword } from "../src/lib/password";
 
 loadEnvConfig(process.cwd());
 
-const scryptCost = 32_768;
-const scryptBlockSize = 8;
-const scryptParallelization = 1;
-const saltBytes = 16;
-const derivedKeyBytes = 64;
-
 class SeedConfigurationError extends Error {}
-
-function deriveKey(password: string, salt: Buffer): Promise<Buffer> {
-  return new Promise((resolve, reject) => {
-    scryptCallback(
-      password,
-      salt,
-      derivedKeyBytes,
-      {
-        N: scryptCost,
-        r: scryptBlockSize,
-        p: scryptParallelization,
-        maxmem: 64 * 1024 * 1024,
-      },
-      (error, derivedKey) => {
-        if (error) {
-          reject(error);
-          return;
-        }
-        resolve(derivedKey);
-      },
-    );
-  });
-}
 
 function requiredEnvironmentVariable(name: string): string {
   const value = process.env[name]?.trim();
@@ -45,32 +16,20 @@ function requiredEnvironmentVariable(name: string): string {
   return value;
 }
 
-async function hashPassword(password: string): Promise<string> {
-  if (password.length < 14) {
-    throw new SeedConfigurationError(
-      "SUPER_ADMIN_PASSWORD must be at least 14 characters.",
-    );
-  }
-
-  const salt = randomBytes(saltBytes);
-  const derivedKey = await deriveKey(password, salt);
-
-  return [
-    "scrypt",
-    scryptCost,
-    scryptBlockSize,
-    scryptParallelization,
-    salt.toString("base64url"),
-    derivedKey.toString("base64url"),
-  ].join("$");
-}
-
 async function seedSuperAdmin(): Promise<void> {
   const databaseUrl = requiredEnvironmentVariable("DATABASE_URL");
   const displayName = requiredEnvironmentVariable("SUPER_ADMIN_DISPLAY_NAME");
   const loginName = requiredEnvironmentVariable("SUPER_ADMIN_LOGIN_NAME");
   const password = requiredEnvironmentVariable("SUPER_ADMIN_PASSWORD");
-  const passwordHash = await hashPassword(password);
+  let passwordHash: string;
+  try {
+    passwordHash = await hashPassword(password);
+  } catch (error) {
+    if (error instanceof Error && error.message.includes("4 characters")) {
+      throw new SeedConfigurationError(error.message);
+    }
+    throw error;
+  }
   const sql = neon(databaseUrl);
 
   const existingSuperAdmin =

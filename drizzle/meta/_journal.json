@@ -22,6 +22,27 @@
       "when": 1792352417967,
       "tag": "0002_profile_category_resume",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1792352980539,
+      "tag": "0003_login_history",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1792355956740,
+      "tag": "0004_auth_version",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1792372273758,
+      "tag": "0005_candidate_country_name",
+      "breakpoints": true
     }
   ]
 }

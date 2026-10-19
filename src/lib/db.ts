@@ -10,6 +10,6 @@ if (!databaseUrl) {
   throw new Error("DATABASE_URL must be configured before using the database.");
 }
 
-const sql = neon(databaseUrl);
+export const neonSql = neon(databaseUrl);
 
-export const db = drizzle({ client: sql, schema });
+export const db = drizzle({ client: neonSql, schema });

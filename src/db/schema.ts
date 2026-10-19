@@ -4,11 +4,11 @@ import {
   index,
   pgEnum,
   pgTable,
+  integer,
   text,
   timestamp,
   uniqueIndex,
   uuid,
-  varchar,
 } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
 
@@ -49,6 +49,7 @@ export const users = pgTable(
     displayName: text("display_name"),
     loginName: text("login_name"),
     passwordHash: text("password_hash"),
+    authVersion: integer("auth_version").default(0).notNull(),
     blockedAt: timestamp("blocked_at", { withTimezone: true, mode: "date" }),
     blockedBy: uuid("blocked_by").references((): AnyPgColumn => users.id, {
       onDelete: "restrict",
@@ -102,11 +103,10 @@ export const profiles = pgTable(
     phone: text("phone"),
     headline: text("headline"),
     linkedinUrl: text("linkedin_url"),
-    countryCode: varchar("country_code", { length: 2 }),
+    country: text("country"),
     city: text("city"),
     province: text("province"),
     addressLine1: text("address_line_1"),
-    addressLine2: text("address_line_2"),
     postalCode: text("postal_code"),
     createdAt: timestamp("created_at", { withTimezone: true, mode: "date" })
       .defaultNow()
@@ -123,7 +123,22 @@ export const profiles = pgTable(
   ],
 );
 
+export const loginHistory = pgTable(
+  "login_history",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    loggedInAt: timestamp("logged_in_at", { withTimezone: true, mode: "date" })
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => [index("login_history_user_logged_in_at_index").on(table.userId, table.loggedInAt)],
+);
+
 export type User = typeof users.$inferSelect;
 export type NewUser = typeof users.$inferInsert;
 export type Profile = typeof profiles.$inferSelect;
 export type NewProfile = typeof profiles.$inferInsert;
+export type LoginHistory = typeof loginHistory.$inferSelect;
