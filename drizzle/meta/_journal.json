@@ -43,6 +43,13 @@
       "when": 1792372273758,
       "tag": "0005_candidate_country_name",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1792373477369,
+      "tag": "0006_education_experience",
+      "breakpoints": true
     }
   ]
 }

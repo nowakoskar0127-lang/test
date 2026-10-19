@@ -60,6 +60,10 @@ The initial database schema contains:
   category assignment and optional resume PDF template reference. Candidate
   fields are nullable so Managers can save drafts.
 - `categories`: category names selectable on candidate profiles.
+- `educations` and `experiences`: repeatable education and work-history records
+  owned by candidate profiles. Dates are optional month-precision dates stored
+  on the first day of the month; current records cannot have an end date, and
+  end dates cannot precede start dates.
 
 `resume_pdf_id` is nullable and intentionally has no foreign key yet. The
 resume-template table and its ownership/storage model are deferred, so no
