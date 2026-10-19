@@ -1,7 +1,13 @@
 "use client";
 
-import { useActionState } from "react";
-import { ChevronDown, Plus, ShieldCheck, UserPlus } from "lucide-react";
+import { useActionState, useState } from "react";
+import {
+  ChevronDown,
+  Plus,
+  ShieldCheck,
+  Trash2,
+  UserPlus,
+} from "lucide-react";
 import { PasswordField } from "@/app/components/password-field";
 import {
   createUserAction,
@@ -18,6 +24,8 @@ type CreateUserFormProps = {
 };
 
 export function CreateUserForm({ role, categories }: CreateUserFormProps) {
+  const [educationRows, setEducationRows] = useState([0]);
+  const [experienceRows, setExperienceRows] = useState([0]);
   const [state, formAction, isPending] = useActionState(
     createUserAction,
     initialState,
@@ -55,6 +63,7 @@ export function CreateUserForm({ role, categories }: CreateUserFormProps) {
         className="space-y-5 border-t border-slate-100 px-5 py-5 sm:px-6"
       >
         {isAccount ? (
+          <>
           <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
             <TextField
               autoComplete="given-name"
@@ -152,6 +161,135 @@ export function CreateUserForm({ role, categories }: CreateUserFormProps) {
               candidate&apos;s name.
             </div>
           </div>
+          <HistorySection
+            addRow={() =>
+              setEducationRows((rows) => [...rows, Math.max(-1, ...rows) + 1])
+            }
+            onRemove={(rowId) =>
+              setEducationRows((rows) => rows.filter((id) => id !== rowId))
+            }
+            rowIds={educationRows}
+            title="Education"
+          >
+            {(rowId) => (
+              <>
+                <TextField
+                  autoComplete="off"
+                  id={`educationInstitution-${rowId}`}
+                  label="Institution"
+                  maxLength={120}
+                  name="educationInstitution"
+                />
+                <TextField
+                  autoComplete="off"
+                  id={`educationDegree-${rowId}`}
+                  label="Degree / credential"
+                  maxLength={120}
+                  name="educationDegree"
+                />
+                <TextField
+                  autoComplete="off"
+                  id={`educationFieldOfStudy-${rowId}`}
+                  label="Field of study"
+                  maxLength={120}
+                  name="educationFieldOfStudy"
+                />
+                <TextField
+                  autoComplete="off"
+                  id={`educationStartDate-${rowId}`}
+                  label="Start month"
+                  maxLength={7}
+                  name="educationStartDate"
+                  type="month"
+                />
+                <TextField
+                  autoComplete="off"
+                  id={`educationEndDate-${rowId}`}
+                  label="End month"
+                  maxLength={7}
+                  name="educationEndDate"
+                  type="month"
+                />
+                <CurrentStatusSelect
+                  id={`educationIsCurrent-${rowId}`}
+                  label="Currently studying here?"
+                  name="educationIsCurrent"
+                />
+                <TextAreaField
+                  className="sm:col-span-2 xl:col-span-3"
+                  id={`educationDescription-${rowId}`}
+                  label="Description (optional)"
+                  maxLength={5000}
+                  name="educationDescription"
+                />
+              </>
+            )}
+          </HistorySection>
+          <HistorySection
+            addRow={() =>
+              setExperienceRows((rows) => [...rows, Math.max(-1, ...rows) + 1])
+            }
+            onRemove={(rowId) =>
+              setExperienceRows((rows) => rows.filter((id) => id !== rowId))
+            }
+            rowIds={experienceRows}
+            title="Experience"
+          >
+            {(rowId) => (
+              <>
+                <TextField
+                  autoComplete="organization"
+                  id={`experienceCompanyName-${rowId}`}
+                  label="Employer"
+                  maxLength={160}
+                  name="experienceCompanyName"
+                />
+                <TextField
+                  autoComplete="organization-title"
+                  id={`experienceJobTitle-${rowId}`}
+                  label="Job title"
+                  maxLength={160}
+                  name="experienceJobTitle"
+                />
+                <TextField
+                  autoComplete="off"
+                  id={`experienceLocation-${rowId}`}
+                  label="Location (optional)"
+                  maxLength={160}
+                  name="experienceLocation"
+                />
+                <TextField
+                  autoComplete="off"
+                  id={`experienceStartDate-${rowId}`}
+                  label="Start month"
+                  maxLength={7}
+                  name="experienceStartDate"
+                  type="month"
+                />
+                <TextField
+                  autoComplete="off"
+                  id={`experienceEndDate-${rowId}`}
+                  label="End month"
+                  maxLength={7}
+                  name="experienceEndDate"
+                  type="month"
+                />
+                <CurrentStatusSelect
+                  id={`experienceIsCurrent-${rowId}`}
+                  label="Currently working here?"
+                  name="experienceIsCurrent"
+                />
+                <TextAreaField
+                  className="sm:col-span-2 xl:col-span-3"
+                  id={`experienceDescription-${rowId}`}
+                  label="Responsibilities / achievements (optional)"
+                  maxLength={5000}
+                  name="experienceDescription"
+                />
+              </>
+            )}
+          </HistorySection>
+          </>
         ) : (
           <div className="grid gap-4 sm:grid-cols-2">
             <TextField
@@ -373,6 +511,62 @@ export function DeleteStaffUserForm({
   );
 }
 
+function HistorySection({
+  title,
+  rowIds,
+  addRow,
+  onRemove,
+  children,
+}: {
+  title: string;
+  rowIds: number[];
+  addRow: () => void;
+  onRemove: (rowId: number) => void;
+  children: (rowId: number) => React.ReactNode;
+}) {
+  return (
+    <section className="space-y-4 rounded-xl border border-slate-200 p-4 sm:col-span-2 sm:p-5 xl:col-span-3">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h3 className="text-sm font-semibold text-slate-800">{title}</h3>
+          <p className="mt-1 text-[11px] text-slate-500">
+            Add up to 20 records. Leave an unused row empty.
+          </p>
+        </div>
+        <button
+        className="inline-flex h-9 items-center gap-2 rounded-lg border border-indigo-200 px-3 text-xs font-semibold text-indigo-700 transition hover:bg-indigo-50 disabled:cursor-not-allowed disabled:opacity-50"
+        disabled={rowIds.length >= 20}
+        onClick={addRow}
+        type="button"
+        >
+          <Plus className="size-3.5" />
+          Add {title.toLowerCase()}
+        </button>
+      </div>
+      {rowIds.map((rowId, index) => (
+        <fieldset
+          className="grid gap-4 rounded-lg bg-slate-50 p-4 sm:grid-cols-2 xl:grid-cols-3"
+          key={rowId}
+        >
+          <legend className="px-1 text-[11px] font-semibold text-slate-600">
+            {title} entry {index + 1}
+          </legend>
+          {children(rowId)}
+          <button
+            aria-label={`Remove ${title.toLowerCase()} entry ${index + 1}`}
+            className="inline-flex h-9 items-center justify-center gap-2 justify-self-start rounded-lg px-3 text-[11px] font-medium text-rose-700 transition hover:bg-rose-50"
+            onClick={() => onRemove(rowId)}
+            type="button"
+          >
+            <Trash2 className="size-3.5" />
+            Remove entry
+          </button>
+        </fieldset>
+      ))}
+    </section>
+  );
+}
+
 function SelectField({
   id,
   label,
@@ -405,6 +599,68 @@ function SelectField({
           </option>
         ))}
       </select>
+    </div>
+  );
+}
+
+function CurrentStatusSelect({
+  id,
+  label,
+  name,
+}: {
+  id: string;
+  label: string;
+  name: string;
+}) {
+  return (
+    <div>
+      <label
+        className="mb-2 block text-xs font-semibold text-slate-700"
+        htmlFor={id}
+      >
+        {label}
+      </label>
+      <select
+        className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-xs outline-none transition focus:border-indigo-400 focus:ring-4 focus:ring-indigo-100"
+        defaultValue="false"
+        id={id}
+        name={name}
+      >
+        <option value="false">No</option>
+        <option value="true">Yes</option>
+      </select>
+    </div>
+  );
+}
+
+function TextAreaField({
+  id,
+  label,
+  name,
+  maxLength,
+  className,
+}: {
+  id: string;
+  label: string;
+  name: string;
+  maxLength: number;
+  className?: string;
+}) {
+  return (
+    <div className={className}>
+      <label
+        className="mb-2 block text-xs font-semibold text-slate-700"
+        htmlFor={id}
+      >
+        {label}
+      </label>
+      <textarea
+        className="min-h-20 w-full resize-y rounded-lg border border-slate-200 px-3 py-2 text-xs outline-none transition focus:border-indigo-400 focus:ring-4 focus:ring-indigo-100"
+        id={id}
+        maxLength={maxLength}
+        name={name}
+        rows={3}
+      />
     </div>
   );
 }

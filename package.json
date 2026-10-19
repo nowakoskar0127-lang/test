@@ -9,7 +9,8 @@
     "lint": "eslint",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
-    "db:seed:super-admin": "tsx scripts/seed-super-admin.ts"
+    "db:seed:super-admin": "tsx scripts/seed-super-admin.ts",
+    "db:seed:prompts": "tsx scripts/seed-prompts.ts"
   },
   "dependencies": {
     "@neondatabase/serverless": "^1.2.0",

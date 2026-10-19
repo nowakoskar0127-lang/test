@@ -7,6 +7,7 @@ import {
   pgEnum,
   pgTable,
   integer,
+  jsonb,
   text,
   timestamp,
   uniqueIndex,
@@ -19,6 +20,21 @@ export const userRole = pgEnum("user_role", [
   "admin",
   "manager",
   "account",
+]);
+
+export const jobStatus = pgEnum("job_status", [
+  "todo",
+  "pending",
+  "applied",
+  "failed",
+]);
+
+export const promptProvider = pgEnum("prompt_provider", ["openai", "gemini"]);
+
+export const promptPurpose = pgEnum("prompt_purpose", [
+  "document_generation",
+  "job_description_evaluation",
+  "application_answer",
 ]);
 
 export const categories = pgTable(
@@ -122,6 +138,180 @@ export const profiles = pgTable(
     uniqueIndex("profiles_candidate_email_normalized_unique")
       .on(sql`lower(btrim(${table.candidateEmail}))`)
       .where(sql`${table.candidateEmail} is not null`),
+  ],
+);
+
+export const settings = pgTable("settings", {
+  key: text("key").primaryKey(),
+  value: jsonb("value").notNull(),
+  updatedByUserId: uuid("updated_by_user_id").references(() => users.id, {
+    onDelete: "restrict",
+  }),
+  createdAt: timestamp("created_at", { withTimezone: true, mode: "date" })
+    .defaultNow()
+    .notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true, mode: "date" })
+    .defaultNow()
+    .notNull(),
+});
+
+export const prompts = pgTable(
+  "prompts",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    promptGroupId: uuid("prompt_group_id").defaultRandom().notNull(),
+    provider: promptProvider("provider").notNull(),
+    purpose: promptPurpose("purpose").notNull(),
+    name: text("name").notNull(),
+    promptTemplate: text("prompt_template").notNull(),
+    version: integer("version").notNull(),
+    isActive: boolean("is_active").default(true).notNull(),
+    isDefault: boolean("is_default").default(false).notNull(),
+    createdByUserId: uuid("created_by_user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "restrict" }),
+    createdAt: timestamp("created_at", { withTimezone: true, mode: "date" })
+      .defaultNow()
+      .notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true, mode: "date" })
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => [
+    uniqueIndex("prompts_group_version_unique").on(
+      table.promptGroupId,
+      table.version,
+    ),
+    uniqueIndex("prompts_one_active_version_per_group_unique")
+      .on(table.promptGroupId)
+      .where(sql`${table.isActive}`),
+    uniqueIndex("prompts_one_default_per_provider_purpose_unique")
+      .on(table.provider, table.purpose)
+      .where(sql`${table.isDefault}`),
+    check("prompts_version_positive_check", sql`${table.version} > 0`),
+    check(
+      "prompts_provider_matches_purpose_check",
+      sql`(${table.provider} = 'openai' and ${table.purpose} = 'document_generation') or (${table.provider} = 'gemini' and ${table.purpose} in ('job_description_evaluation', 'application_answer'))`,
+    ),
+  ],
+);
+
+export const managerPromptOverrides = pgTable("manager_prompt_overrides", {
+  managerId: uuid("manager_id")
+    .primaryKey()
+    .references(() => users.id, { onDelete: "cascade" }),
+  promptTemplate: text("prompt_template").notNull(),
+  basedOnPromptId: uuid("based_on_prompt_id").references(() => prompts.id, {
+    onDelete: "restrict",
+  }),
+  createdAt: timestamp("created_at", { withTimezone: true, mode: "date" })
+    .defaultNow()
+    .notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true, mode: "date" })
+    .defaultNow()
+    .notNull(),
+});
+
+export const managerPromptAssignments = pgTable("manager_prompt_assignments", {
+  managerId: uuid("manager_id")
+    .primaryKey()
+    .references(() => users.id, { onDelete: "cascade" }),
+  promptId: uuid("prompt_id")
+    .notNull()
+    .references(() => prompts.id, { onDelete: "restrict" }),
+  assignedByUserId: uuid("assigned_by_user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "restrict" }),
+  assignedAt: timestamp("assigned_at", { withTimezone: true, mode: "date" })
+    .defaultNow()
+    .notNull(),
+});
+
+export const jobs = pgTable(
+  "jobs",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    jobUrl: text("job_url").notNull(),
+    jobTitle: text("job_title").notNull(),
+    company: text("company").notNull(),
+    location: text("location"),
+    candidateId: uuid("candidate_id")
+      .notNull()
+      .references(() => profiles.userId, { onDelete: "restrict" }),
+    managerId: uuid("manager_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "restrict" }),
+    date: date("date", { mode: "string" }).notNull(),
+    status: jobStatus("status").default("todo").notNull(),
+    failureReason: text("failure_reason"),
+    createdAt: timestamp("created_at", { withTimezone: true, mode: "date" })
+      .defaultNow()
+      .notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true, mode: "date" })
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => [
+    index("jobs_manager_date_index").on(table.managerId, table.date),
+    index("jobs_candidate_date_status_index").on(
+      table.candidateId,
+      table.date,
+      table.status,
+    ),
+    index("jobs_job_title_trgm_index").using(
+      "gin",
+      table.jobTitle.op("gin_trgm_ops"),
+    ),
+    index("jobs_job_url_trgm_index").using(
+      "gin",
+      table.jobUrl.op("gin_trgm_ops"),
+    ),
+  ],
+);
+
+export const bids = pgTable(
+  "bids",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    sourceJobId: uuid("source_job_id").notNull(),
+    managerId: uuid("manager_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "restrict" }),
+    candidateId: uuid("candidate_id")
+      .notNull()
+      .references(() => profiles.userId, { onDelete: "restrict" }),
+    jobUrl: text("job_url").notNull(),
+    jobTitle: text("job_title").notNull(),
+    company: text("company").notNull(),
+    location: text("location"),
+    employmentType: text("employment_type"),
+    resumeLocalPath: text("resume_local_path").notNull(),
+    googleDrivePath: text("googledriver_path"),
+    appliedAt: timestamp("applied_at", { withTimezone: true, mode: "date" })
+      .defaultNow()
+      .notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true, mode: "date" })
+      .defaultNow()
+      .notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true, mode: "date" })
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => [
+    uniqueIndex("bids_source_job_id_unique").on(table.sourceJobId),
+    index("bids_manager_applied_at_index").on(table.managerId, table.appliedAt),
+    index("bids_candidate_applied_at_index").on(
+      table.candidateId,
+      table.appliedAt,
+    ),
+    index("bids_job_title_trgm_index").using(
+      "gin",
+      table.jobTitle.op("gin_trgm_ops"),
+    ),
+    index("bids_job_url_trgm_index").using(
+      "gin",
+      table.jobUrl.op("gin_trgm_ops"),
+    ),
   ],
 );
 
@@ -243,6 +433,21 @@ export type User = typeof users.$inferSelect;
 export type NewUser = typeof users.$inferInsert;
 export type Profile = typeof profiles.$inferSelect;
 export type NewProfile = typeof profiles.$inferInsert;
+export type Setting = typeof settings.$inferSelect;
+export type NewSetting = typeof settings.$inferInsert;
+export type Prompt = typeof prompts.$inferSelect;
+export type NewPrompt = typeof prompts.$inferInsert;
+export type ManagerPromptOverride = typeof managerPromptOverrides.$inferSelect;
+export type NewManagerPromptOverride =
+  typeof managerPromptOverrides.$inferInsert;
+export type ManagerPromptAssignment =
+  typeof managerPromptAssignments.$inferSelect;
+export type NewManagerPromptAssignment =
+  typeof managerPromptAssignments.$inferInsert;
+export type Job = typeof jobs.$inferSelect;
+export type NewJob = typeof jobs.$inferInsert;
+export type Bid = typeof bids.$inferSelect;
+export type NewBid = typeof bids.$inferInsert;
 export type Education = typeof educations.$inferSelect;
 export type NewEducation = typeof educations.$inferInsert;
 export type Experience = typeof experiences.$inferSelect;

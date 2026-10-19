@@ -64,6 +64,36 @@ The initial database schema contains:
   owned by candidate profiles. Dates are optional month-precision dates stored
   on the first day of the month; current records cannot have an end date, and
   end dates cannot precede start dates.
+- `settings`: global JSON settings, with an optional reference to the staff
+  member who last updated each value. Settings-management actions must enforce
+  Super Admin-only access.
+- `prompts`: versioned global prompts. OpenAI has one shared document-generation
+  prompt for resumes and cover letters; Gemini has separate job-description
+  evaluation and application-answer prompts. Only Super Admin can manage
+  global prompts.
+- `manager_prompt_overrides`: one private OpenAI prompt per Manager. In private
+  prompt mode, it is used when no Super Admin assignment overrides it; if no
+  private prompt exists, the active global OpenAI prompt is the fallback.
+- `manager_prompt_assignments`: one stable Super Admin-selected prompt per
+  Manager. Assignments take precedence in either mode. Removing an assignment
+  restores the normal global/private selection without deleting the Manager's
+  private prompt. Managers must not be allowed to read or change Gemini prompts.
+- `jobs`: Manager-owned, candidate-specific daily application tasks with
+  `todo`, `pending`, `applied`, and `failed` statuses.
+- `bids`: durable successful-application snapshots containing job, candidate,
+  Manager, resume-path, and application timestamp details. A unique source job
+  ID prevents duplicate archive rows when applying a job is retried.
+
+Job title and URL each have independent PostgreSQL trigram indexes on both
+Jobs and Bids to support partial text search. The `pg_trgm` extension is enabled
+by the database migration. The application workflow that transitions a Job to
+`applied` and inserts its Bid atomically still needs to be implemented.
+Prompt selection mode is stored in the global `settings` row with key
+`prompt_mode` and defaults to `global`. After applying migrations, seed editable
+global starter prompts and this default with `npm run db:seed:prompts`. Super
+Admin manages prompt versions, mode, and Manager assignments from `/settings`.
+Managers can edit their private ChatGPT prompt at `/prompts` when private mode
+is enabled; that page never reads Gemini prompts.
 
 `resume_pdf_id` is nullable and intentionally has no foreign key yet. The
 resume-template table and its ownership/storage model are deferred, so no
@@ -89,7 +119,11 @@ creation form only asks for a username and password. The dashboard shows the
 full display name and username rather than using an initial as the identity.
 Candidate creation captures name, email, phone, headline, LinkedIn URL, country
 name, city, province/state, one address line, postal code, and optional category
-in one full-width form for Managers.
+in one full-width form for Managers. Managers can add multiple Education and
+Experience records in that same form; each entry supports month/year dates,
+optional details, and a current-status selection. Candidate and history records
+are saved atomically, and incomplete history rows are rejected rather than
+silently discarded.
 Staff can update their own display name and login name from Profile after
 confirming their current password; they can optionally replace their password.
 Only Super Admin can update another staff member's login name or password.

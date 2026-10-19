@@ -12,11 +12,12 @@ import {
   Users,
   UserRound,
 } from "lucide-react";
-import { sql } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import Link from "next/link";
 import { logoutAction } from "@/app/login/actions";
 import { db } from "@/lib/db";
 import { requireUser } from "@/lib/session";
+import { settings } from "@/db/schema";
 
 export const instant = false;
 
@@ -92,6 +93,15 @@ function formatDateTime(value: Date | string): string {
 export default async function Home() {
   const currentUser = await requireUser();
   const canViewBlocked = currentUser.role === "super_admin";
+  let managerCanEditPrompt = false;
+  if (currentUser.role === "manager") {
+    const [promptMode] = await db
+      .select({ value: settings.value })
+      .from(settings)
+      .where(eq(settings.key, "prompt_mode"))
+      .limit(1);
+    managerCanEditPrompt = promptMode?.value === "private";
+  }
 
   const visibleResult = await db.execute<WorkspaceUserRow>(sql`
     with recursive visible_users as (
@@ -230,8 +240,13 @@ export default async function Home() {
             {[
               { label: "Users", icon: Users, href: "/users" },
               { label: "Applications", icon: BriefcaseBusiness },
+              ...(managerCanEditPrompt
+                ? [{ label: "My AI Prompt", icon: FileText, href: "/prompts" }]
+                : []),
               { label: "Profile", icon: UserRound, href: "/profile" },
-              { label: "Settings", icon: Settings2 },
+              ...(currentUser.role === "super_admin"
+                ? [{ label: "Settings", icon: Settings2, href: "/settings" }]
+                : []),
             ].map((item) => {
               const Icon = item.icon;
               if ("href" in item && item.href) {
