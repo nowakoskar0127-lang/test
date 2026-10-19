@@ -13,6 +13,7 @@ import {
   createUserAction,
   deleteStaffUserAction,
   type UserActionState,
+  updateCandidateProfileAction,
   updateUserCredentialsAction,
 } from "@/app/users/actions";
 
@@ -386,6 +387,159 @@ export function CredentialResetForm({
   );
 }
 
+export type CandidateProfileValues = {
+  userId: string;
+  firstName: string | null;
+  lastName: string | null;
+  candidateEmail: string | null;
+  phone: string | null;
+  headline: string | null;
+  linkedinUrl: string | null;
+  country: string | null;
+  city: string | null;
+  province: string | null;
+  addressLine1: string | null;
+  postalCode: string | null;
+  categoryId: string | null;
+};
+
+export function EditCandidateProfileForm({
+  candidate,
+  categories,
+}: {
+  candidate: CandidateProfileValues;
+  categories: { id: string; name: string }[];
+}) {
+  const [state, formAction, isPending] = useActionState(
+    updateCandidateProfileAction,
+    initialState,
+  );
+  const fieldId = (field: string) => `${field}-${candidate.userId}`;
+
+  return (
+    <details className="group mt-3">
+      <summary className="cursor-pointer text-xs font-semibold text-indigo-600 hover:text-indigo-700">
+        Edit candidate profile
+      </summary>
+      <form action={formAction} className="mt-4 space-y-4">
+        <input name="userId" type="hidden" value={candidate.userId} />
+        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+          <TextField
+            autoComplete="given-name"
+            defaultValue={candidate.firstName ?? ""}
+            id={fieldId("firstName")}
+            label="First name"
+            maxLength={120}
+            name="firstName"
+            required
+          />
+          <TextField
+            autoComplete="family-name"
+            defaultValue={candidate.lastName ?? ""}
+            id={fieldId("lastName")}
+            label="Last name"
+            maxLength={120}
+            name="lastName"
+            required
+          />
+          <TextField
+            autoComplete="email"
+            defaultValue={candidate.candidateEmail ?? ""}
+            id={fieldId("candidateEmail")}
+            label="Candidate email"
+            maxLength={320}
+            name="candidateEmail"
+            type="email"
+          />
+          <TextField
+            autoComplete="tel"
+            defaultValue={candidate.phone ?? ""}
+            id={fieldId("phone")}
+            label="Phone"
+            maxLength={64}
+            name="phone"
+          />
+          <TextField
+            autoComplete="organization-title"
+            defaultValue={candidate.headline ?? ""}
+            id={fieldId("headline")}
+            label="Professional headline"
+            maxLength={256}
+            name="headline"
+          />
+          <TextField
+            autoComplete="url"
+            defaultValue={candidate.linkedinUrl ?? ""}
+            id={fieldId("linkedinUrl")}
+            label="LinkedIn profile URL"
+            maxLength={2048}
+            name="linkedinUrl"
+            type="url"
+          />
+          <TextField
+            autoComplete="country"
+            defaultValue={candidate.country ?? ""}
+            id={fieldId("country")}
+            label="Country"
+            maxLength={120}
+            name="country"
+          />
+          <TextField
+            autoComplete="address-level2"
+            defaultValue={candidate.city ?? ""}
+            id={fieldId("city")}
+            label="City"
+            maxLength={120}
+            name="city"
+          />
+          <TextField
+            autoComplete="address-level1"
+            defaultValue={candidate.province ?? ""}
+            id={fieldId("province")}
+            label="Province / state"
+            maxLength={120}
+            name="province"
+          />
+          <TextField
+            autoComplete="street-address"
+            defaultValue={candidate.addressLine1 ?? ""}
+            id={fieldId("addressLine1")}
+            label="Address line 1"
+            maxLength={256}
+            name="addressLine1"
+          />
+          <TextField
+            autoComplete="postal-code"
+            defaultValue={candidate.postalCode ?? ""}
+            id={fieldId("postalCode")}
+            label="Postal code"
+            maxLength={32}
+            name="postalCode"
+          />
+          <SelectField
+            defaultValue={candidate.categoryId ?? ""}
+            id={fieldId("categoryId")}
+            label="Category"
+            name="categoryId"
+            options={categories}
+          />
+        </div>
+        {state.error && <FormMessage variant="error">{state.error}</FormMessage>}
+        {state.success && (
+          <FormMessage variant="success">{state.success}</FormMessage>
+        )}
+        <button
+          className="inline-flex h-9 items-center rounded-lg bg-indigo-600 px-3 text-xs font-semibold text-white transition hover:bg-indigo-700 disabled:cursor-wait disabled:opacity-70"
+          disabled={isPending}
+          type="submit"
+        >
+          {isPending ? "Saving..." : "Save profile"}
+        </button>
+      </form>
+    </details>
+  );
+}
+
 function TextField({
   id,
   label,
@@ -572,11 +726,13 @@ function SelectField({
   label,
   name,
   options,
+  defaultValue = "",
 }: {
   id: string;
   label: string;
   name: string;
   options: { id: string; name: string }[];
+  defaultValue?: string;
 }) {
   return (
     <div>
@@ -590,7 +746,7 @@ function SelectField({
         className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-xs outline-none transition focus:border-indigo-400 focus:ring-4 focus:ring-indigo-100"
         id={id}
         name={name}
-        defaultValue=""
+        defaultValue={defaultValue}
       >
         <option value="">No category</option>
         {options.map((option) => (

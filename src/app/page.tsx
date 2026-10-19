@@ -9,6 +9,7 @@ import {
   LogOut,
   Settings2,
   ShieldCheck,
+  Tags,
   Users,
   UserRound,
 } from "lucide-react";
@@ -239,6 +240,9 @@ export default async function Home() {
             </Link>
             {[
               { label: "Users", icon: Users, href: "/users" },
+              ...(currentUser.role === "super_admin"
+                ? [{ label: "Categories", icon: Tags, href: "/categories" }]
+                : []),
               { label: "Applications", icon: BriefcaseBusiness },
               ...(managerCanEditPrompt
                 ? [{ label: "My AI Prompt", icon: FileText, href: "/prompts" }]

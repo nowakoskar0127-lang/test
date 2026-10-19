@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { KeyRound, UserRound } from "lucide-react";
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { ProfileForm } from "@/app/profile/profile-form";
 import { getCurrentUser } from "@/lib/session";
@@ -17,16 +18,24 @@ export default async function ProfilePage() {
   return (
     <main className="min-h-screen bg-[#f7f8fa] px-5 py-8 sm:px-8 sm:py-12">
       <div className="mx-auto max-w-3xl">
-        <div className="flex items-center gap-3">
-          <div className="flex size-10 items-center justify-center rounded-xl bg-indigo-100 text-indigo-700">
-            <UserRound className="size-5" />
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <div className="flex size-10 items-center justify-center rounded-xl bg-indigo-100 text-indigo-700">
+              <UserRound className="size-5" />
+            </div>
+            <div>
+              <p className="text-xs font-medium text-indigo-600">Account</p>
+              <h1 className="text-2xl font-semibold tracking-tight text-slate-900">
+                My profile
+              </h1>
+            </div>
           </div>
-          <div>
-            <p className="text-xs font-medium text-indigo-600">Account</p>
-            <h1 className="text-2xl font-semibold tracking-tight text-slate-900">
-              My profile
-            </h1>
-          </div>
+          <Link
+            className="text-xs font-semibold text-indigo-600 hover:text-indigo-700"
+            href="/"
+          >
+            Back to dashboard
+          </Link>
         </div>
 
         <section className="mt-7 rounded-xl border border-slate-200/80 bg-white p-5 shadow-[0_1px_2px_rgba(15,23,42,0.03)] sm:p-7">

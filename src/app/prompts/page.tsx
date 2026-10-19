@@ -57,16 +57,24 @@ export default async function ManagerPromptsPage() {
   return (
     <main className="min-h-screen bg-[#f7f8fa] px-5 py-8 text-slate-900 sm:px-8 sm:py-10">
       <div className="mx-auto max-w-4xl">
-        <header className="mb-8">
-          <p className="mb-2 text-xs font-medium text-slate-400">
-            Manager workspace
-          </p>
-          <h1 className="text-3xl font-semibold tracking-tight">My AI prompt</h1>
-          <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500">
-            Your ChatGPT prompt is shared by resume and cover-letter
-            generation. Gemini application prompts are managed by Super Admin
-            and are not available here.
-          </p>
+        <header className="mb-8 flex flex-wrap items-start justify-between gap-4">
+          <div>
+            <p className="mb-2 text-xs font-medium text-slate-400">
+              Manager workspace
+            </p>
+            <h1 className="text-3xl font-semibold tracking-tight">My AI prompt</h1>
+            <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500">
+              Your ChatGPT prompt is shared by resume and cover-letter
+              generation. Gemini application prompts are managed by Super Admin
+              and are not available here.
+            </p>
+          </div>
+          <Link
+            className="text-xs font-semibold text-indigo-600 hover:text-indigo-700"
+            href="/"
+          >
+            Back to dashboard
+          </Link>
         </header>
 
         {!privateMode ? (
@@ -82,12 +90,6 @@ export default async function ManagerPromptsPage() {
               Private prompt editing is disabled until Super Admin changes the
               prompt mode.
             </p>
-            <Link
-              className="mt-5 inline-flex h-9 items-center rounded-lg border border-slate-200 px-3 text-xs font-semibold text-slate-600 hover:bg-slate-50"
-              href="/"
-            >
-              Back to workspace
-            </Link>
           </section>
         ) : defaultPrompt ? (
           <section className="rounded-xl border border-slate-200 bg-white p-5 sm:p-6">

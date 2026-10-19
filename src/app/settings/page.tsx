@@ -1,4 +1,5 @@
 import { and, asc, eq, isNull } from "drizzle-orm";
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { GlobalPromptForm, PromptAssignmentForm, PromptModeForm } from "@/app/settings/prompt-forms";
 import {
@@ -87,17 +88,25 @@ export default async function SettingsPage() {
   return (
     <main className="min-h-screen bg-[#f7f8fa] px-5 py-8 text-slate-900 sm:px-8 sm:py-10">
       <div className="mx-auto max-w-6xl">
-        <header className="mb-8">
-          <p className="mb-2 text-xs font-medium text-slate-400">
-            Super Admin workspace
-          </p>
-          <h1 className="text-3xl font-semibold tracking-tight">
-            AI prompt settings
-          </h1>
-          <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500">
-            Manage global prompt versions, choose the Manager prompt mode, and
-            assign stable ChatGPT prompt overrides.
-          </p>
+        <header className="mb-8 flex flex-wrap items-start justify-between gap-4">
+          <div>
+            <p className="mb-2 text-xs font-medium text-slate-400">
+              Super Admin workspace
+            </p>
+            <h1 className="text-3xl font-semibold tracking-tight">
+              AI prompt settings
+            </h1>
+            <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500">
+              Manage global prompt versions, choose the Manager prompt mode, and
+              assign stable ChatGPT prompt overrides.
+            </p>
+          </div>
+          <Link
+            className="text-xs font-semibold text-indigo-600 hover:text-indigo-700"
+            href="/"
+          >
+            Back to dashboard
+          </Link>
         </header>
 
         <section className="mb-6 rounded-xl border border-slate-200 bg-white p-5 sm:p-6">

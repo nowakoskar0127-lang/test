@@ -14,6 +14,7 @@ import {
   CreateUserForm,
   CredentialResetForm,
   DeleteStaffUserForm,
+  EditCandidateProfileForm,
 } from "@/app/users/user-forms";
 import { db } from "@/lib/db";
 import { getCurrentUser } from "@/lib/session";
@@ -42,6 +43,16 @@ type UserRow = {
   first_name: string | null;
   last_name: string | null;
   candidate_email: string | null;
+  phone: string | null;
+  headline: string | null;
+  linkedin_url: string | null;
+  country: string | null;
+  city: string | null;
+  province: string | null;
+  address_line_1: string | null;
+  postal_code: string | null;
+  category_id: string | null;
+  category_name: string | null;
 };
 
 type UserNode = UserRow & { children: UserNode[] };
@@ -104,9 +115,20 @@ export default async function UsersPage() {
       visible_users.created_at,
       profiles.first_name,
       profiles.last_name,
-      profiles.candidate_email
+      profiles.candidate_email,
+      profiles.phone,
+      profiles.headline,
+      profiles.linkedin_url,
+      profiles.country,
+      profiles.city,
+      profiles.province,
+      profiles.address_line_1,
+      profiles.postal_code,
+      profiles.category_id,
+      categories.name as category_name
     from visible_users
     left join profiles on profiles.user_id = visible_users.id
+    left join categories on categories.id = profiles.category_id
   `);
 
   const tree = buildTree(result.rows, actor.id);
@@ -139,11 +161,14 @@ export default async function UsersPage() {
               <span className="font-medium text-slate-700">Users</span>
             </div>
             <h1 className="text-2xl font-semibold tracking-tight text-slate-900 sm:text-3xl">
-              Users &amp; hierarchy
+              {actor.role === "manager"
+                ? "Candidate Accounts"
+                : "Users & hierarchy"}
             </h1>
             <p className="mt-2 text-sm text-slate-500">
-              View people within your organization branch and add the next role
-              in the hierarchy.
+              {actor.role === "manager"
+                ? "Manage candidate profiles assigned to you."
+                : "View people within your organization branch and add the next role in the hierarchy."}
             </p>
           </div>
           <Link
@@ -153,6 +178,15 @@ export default async function UsersPage() {
             Back to dashboard
           </Link>
         </div>
+        {actor.role === "super_admin" && (
+          <Link
+            className="mt-4 inline-flex items-center gap-2 rounded-lg border border-indigo-200 bg-white px-3 py-2 text-xs font-semibold text-indigo-700 transition hover:bg-indigo-50"
+            href="/categories"
+          >
+            <FolderTree className="size-3.5" />
+            Manage candidate categories
+          </Link>
+        )}
 
         <section
           aria-label="Visible user totals"
@@ -199,22 +233,118 @@ export default async function UsersPage() {
               <FolderTree className="mt-0.5 size-4 text-indigo-600" />
               <div>
                 <h2 className="text-sm font-semibold text-slate-800">
-                  Organization tree
+                  {actor.role === "manager"
+                    ? "Candidate Accounts"
+                    : "Organization tree"}
                 </h2>
                 <p className="mt-1 text-[11px] text-slate-400">
-                  {actor.role === "super_admin"
-                    ? "All users and descendants, including blocked records."
-                    : "Your account and the users managed below you."}
+                  {actor.role === "manager"
+                    ? "View and edit candidate profile details. Education and experience records are managed separately."
+                    : actor.role === "super_admin"
+                      ? "All users and descendants, including blocked records."
+                      : "Your account and the users managed below you."}
                 </p>
               </div>
             </div>
-            <ul className="space-y-2">
-              <UserTreeNode
-                canEditCredentials={actor.role === "super_admin"}
-                allUsers={result.rows}
-                user={tree}
-              />
-            </ul>
+            {actor.role === "manager" ? (
+              <div className="overflow-x-auto">
+                {result.rows.filter((user) => user.role === "account").length ? (
+                  <table className="w-full min-w-[980px] text-left text-xs">
+                    <thead className="border-b border-slate-100 text-[10px] uppercase tracking-wide text-slate-400">
+                      <tr>
+                        <th className="px-3 py-3 font-semibold">Candidate</th>
+                        <th className="px-3 py-3 font-semibold">Category</th>
+                        <th className="px-3 py-3 font-semibold">Contact</th>
+                        <th className="px-3 py-3 font-semibold">Location</th>
+                        <th className="px-3 py-3 font-semibold">Headline</th>
+                        <th className="px-3 py-3 font-semibold">LinkedIn</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                      {result.rows
+                        .filter((user) => user.role === "account")
+                        .map((candidate) => (
+                          <tr key={candidate.id}>
+                            <td className="px-3 py-4 align-top">
+                              <p className="font-semibold text-slate-800">
+                                {userName(candidate)}
+                              </p>
+                              <EditCandidateProfileForm
+                                candidate={{
+                                  userId: candidate.id,
+                                  firstName: candidate.first_name,
+                                  lastName: candidate.last_name,
+                                  candidateEmail: candidate.candidate_email,
+                                  phone: candidate.phone,
+                                  headline: candidate.headline,
+                                  linkedinUrl: candidate.linkedin_url,
+                                  country: candidate.country,
+                                  city: candidate.city,
+                                  province: candidate.province,
+                                  addressLine1: candidate.address_line_1,
+                                  postalCode: candidate.postal_code,
+                                  categoryId: candidate.category_id,
+                                }}
+                                categories={categoryOptions}
+                              />
+                            </td>
+                            <td className="px-3 py-4 align-top text-slate-600">
+                              {candidate.category_name ?? "Uncategorized"}
+                            </td>
+                            <td className="px-3 py-4 align-top text-slate-600">
+                              <p>{candidate.candidate_email ?? "—"}</p>
+                              <p className="mt-1 text-slate-400">
+                                {candidate.phone ?? "—"}
+                              </p>
+                            </td>
+                            <td className="px-3 py-4 align-top text-slate-600">
+                              {[
+                                candidate.address_line_1,
+                                candidate.city,
+                                candidate.province,
+                                candidate.country,
+                                candidate.postal_code,
+                              ]
+                                .filter(Boolean)
+                                .join(", ") || "—"}
+                            </td>
+                            <td className="max-w-56 px-3 py-4 align-top text-slate-600">
+                              {candidate.headline ?? "—"}
+                            </td>
+                            <td className="px-3 py-4 align-top">
+                              {candidate.linkedin_url ? (
+                                <a
+                                  className="inline-flex items-center gap-1 text-indigo-600 hover:text-indigo-700"
+                                  href={candidate.linkedin_url}
+                                  rel="noreferrer"
+                                  target="_blank"
+                                >
+                                  Open profile
+                                </a>
+                              ) : (
+                                "—"
+                              )}
+                            </td>
+                          </tr>
+                        ))}
+                    </tbody>
+                  </table>
+                ) : (
+                  <p className="rounded-lg bg-slate-50 px-4 py-5 text-sm text-slate-500">
+                    No candidate Accounts yet. Use Add candidate Account to
+                    create the first profile.
+                  </p>
+                )}
+              </div>
+            ) : (
+              <ul className="space-y-2">
+                <UserTreeNode
+                  canEditCredentials={actor.role === "super_admin"}
+                  allUsers={result.rows}
+                  user={tree}
+                />
+              </ul>
+            )}
           </section>
 
           <div className={`grid gap-5 ${createRole === "account" ? "order-1" : ""}`}>

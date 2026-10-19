@@ -2,7 +2,7 @@
 
 import { and, eq, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
-import { users } from "@/db/schema";
+import { categories, profiles, users } from "@/db/schema";
 import { db, neonSql } from "@/lib/db";
 import { hashPassword } from "@/lib/password";
 import { requireUser } from "@/lib/session";
@@ -215,6 +215,152 @@ export async function createUserAction(
         ? "Candidate profile created."
         : `${expectedRole === "admin" ? "Admin" : "Manager"} account created.`,
   };
+}
+
+export async function updateCandidateProfileAction(
+  _previousState: UserActionState,
+  formData: FormData,
+): Promise<UserActionState> {
+  const actor = await requireUser();
+  if (actor.role !== "manager") {
+    return {
+      ...emptyState,
+      error: "Only Managers can update candidate profiles.",
+    };
+  }
+
+  const userId = readText(formData, "userId", 64);
+  if (!isUuid(userId)) {
+    return { ...emptyState, error: "Select a valid candidate account." };
+  }
+
+  const limits = {
+    firstName: 120,
+    lastName: 120,
+    candidateEmail: 320,
+    phone: 64,
+    headline: 256,
+    linkedinUrl: 2048,
+    country: 120,
+    city: 120,
+    province: 120,
+    addressLine1: 256,
+    postalCode: 32,
+    categoryId: 36,
+  } as const;
+  const values = {
+    firstName: readText(formData, "firstName", limits.firstName),
+    lastName: readText(formData, "lastName", limits.lastName),
+    candidateEmail: readText(formData, "candidateEmail", limits.candidateEmail),
+    phone: readText(formData, "phone", limits.phone),
+    headline: readText(formData, "headline", limits.headline),
+    linkedinUrl: readText(formData, "linkedinUrl", limits.linkedinUrl),
+    country: readText(formData, "country", limits.country),
+    city: readText(formData, "city", limits.city),
+    province: readText(formData, "province", limits.province),
+    addressLine1: readText(formData, "addressLine1", limits.addressLine1),
+    postalCode: readText(formData, "postalCode", limits.postalCode),
+    categoryId: readText(formData, "categoryId", limits.categoryId),
+  };
+  if (
+    Object.entries(limits).some(([name, maxLength]) => {
+      const value = formData.get(name);
+      return typeof value !== "string" || value.length > maxLength;
+    })
+  ) {
+    return { ...emptyState, error: "One or more profile fields are invalid." };
+  }
+
+  if (!values.firstName || !values.lastName) {
+    return {
+      ...emptyState,
+      error: "Enter the candidate's first and last name.",
+    };
+  }
+  if (
+    values.candidateEmail &&
+    !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(values.candidateEmail)
+  ) {
+    return { ...emptyState, error: "Enter a valid candidate email address." };
+  }
+  if (values.linkedinUrl && !isHttpUrl(values.linkedinUrl)) {
+    return { ...emptyState, error: "Enter a valid LinkedIn profile URL." };
+  }
+  if (values.categoryId && !isUuid(values.categoryId)) {
+    return { ...emptyState, error: "Select a valid candidate category." };
+  }
+
+  try {
+    if (values.categoryId) {
+      const [category] = await db
+        .select({ id: categories.id })
+        .from(categories)
+        .where(eq(categories.id, values.categoryId))
+        .limit(1);
+      if (!category) {
+        return {
+          ...emptyState,
+          error: "That candidate category no longer exists. Refresh and try again.",
+        };
+      }
+    }
+
+    const [updatedProfile] = await db
+      .update(profiles)
+      .set({
+        categoryId: values.categoryId || null,
+        firstName: values.firstName,
+        lastName: values.lastName,
+        candidateEmail: values.candidateEmail
+          ? values.candidateEmail.toLowerCase()
+          : null,
+        phone: values.phone || null,
+        headline: values.headline || null,
+        linkedinUrl: values.linkedinUrl || null,
+        country: values.country || null,
+        city: values.city || null,
+        province: values.province || null,
+        addressLine1: values.addressLine1 || null,
+        postalCode: values.postalCode || null,
+        updatedAt: new Date(),
+      })
+      .where(
+        and(
+          eq(profiles.userId, userId),
+          sql`exists (
+            select 1 from users
+            where users.id = ${profiles.userId}
+              and users.role = 'account'
+              and users.parent_user_id = ${actor.id}
+              and users.blocked_at is null
+          )`,
+        ),
+      )
+      .returning({ userId: profiles.userId });
+
+    if (!updatedProfile) {
+      return {
+        ...emptyState,
+        error: "That active candidate account was not found in your team.",
+      };
+    }
+  } catch (error) {
+    if (isUniqueViolation(error)) {
+      return {
+        ...emptyState,
+        error: "That candidate email is already in use.",
+      };
+    }
+    logUserActionFailure("updating a candidate profile", error);
+    return {
+      ...emptyState,
+      error: "The candidate profile could not be updated. Please try again.",
+    };
+  }
+
+  revalidatePath("/users");
+  revalidatePath("/");
+  return { error: null, success: "Candidate profile updated." };
 }
 
 export async function updateUserCredentialsAction(

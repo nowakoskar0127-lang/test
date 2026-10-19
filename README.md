@@ -10,12 +10,15 @@ integrations will be implemented in later phases.
 - Responsive sign-in page and role-scoped dashboard connected to Neon.
 - Server-only Neon connection helper and Users/Profiles/Categories/Login History schema.
 - Gmail mailbox OAuth is deferred until the candidate-consent flow is defined.
-- AI integrations and the browser extension are not connected yet.
+- Manager-only browser-extension sign-in and a Get JD workflow are available
+  for local development. Gemini classifies pages and recommends matching
+  Manager Accounts; Managers can review the suggestions and save Job List rows.
 
 Planned AI responsibilities:
 
 - OpenAI/ChatGPT: tailored resumes and cover letters only.
-- Gemini: instructions and answers for application questions only.
+- Gemini: job-page classification and candidate fit evaluation; application
+  answer generation is planned for a later workflow.
 - API keys must remain server-side and must never use a `NEXT_PUBLIC_` prefix.
 
 Manual application mode will leave Next/Submit to the Manager after review.
@@ -46,8 +49,38 @@ For another environment, generate a separate secret and store it only in that
 environment's secret store. Never reuse secrets between environments or commit
 them.
 
-`OPENAI_API_KEY` and `GEMINI_API_KEY` are reserved for their respective
-server-side integrations and are not used by the current dashboard.
+`OPENAI_API_KEY` and `GEMINI_API_KEY` are used only by their respective
+server-side integrations. For local Get JD, put your Gemini API key value in
+the `GEMINI_API_KEY` entry in `.env.local` (the variable name is not the name
+you gave the key in Google AI Studio). The previous
+`JD_READ_PROMPT_GEMINI_API_KEY_1` variable name is also accepted for
+compatibility. Restart the QTS server after changing `.env.local`. Get JD also
+requires an active default Gemini `job_description_evaluation` prompt.
+
+## Browser extension sign-in
+
+The extension authenticates active Manager accounts against
+`POST /api/extension/auth/login`. It receives a signed bearer token valid for
+24 hours and can verify it through `GET /api/extension/auth/me`. Each
+verification reloads the Manager from Neon, so blocked accounts and sessions
+invalidated by an auth-version change are rejected. The extension stores the
+token in extension local storage and clears its local copy on logout; the
+server-issued token expires after 24 hours. Use HTTPS for
+deployed environments; the extension currently defaults to
+`http://localhost:3000` for local development.
+
+The authenticated extension popup has a persistent **Get JD** mode. While
+enabled, it extracts job-page details from web pages opened in the browser and
+posts them to `POST /api/extension/get-jd`. The endpoint resolves the Manager
+and active candidate profiles from the bearer token, checks for a matching
+Manager Job or Bid, and otherwise asks Gemini to classify the posting and
+recommend candidate profiles. The Manager can adjust the recommended
+selection and save one Job row per chosen Account through
+`POST /api/extension/get-jd/save`. The extension does not create Bids, fill
+application forms, or submit applications. Starting Get JD opens and pins a
+ChatGPT tab if one is not already open; opening the extension popup while the
+mode is active shows the Get JD status and a **Back Home** control. Back Home
+clears the extension status and stops further Get JD page processing.
 
 ## Users and candidate profiles
 
@@ -124,6 +157,10 @@ Experience records in that same form; each entry supports month/year dates,
 optional details, and a current-status selection. Candidate and history records
 are saved atomically, and incomplete history rows are rejected rather than
 silently discarded.
+Only Super Admin manages the shared candidate category list at `/categories`;
+Managers can assign an existing category to a candidate but cannot add, rename,
+or delete categories. Deleting a category clears that assignment on profiles.
+Get JD displays each candidate's name and assigned category in the review list.
 Staff can update their own display name and login name from Profile after
 confirming their current password; they can optionally replace their password.
 Only Super Admin can update another staff member's login name or password.
